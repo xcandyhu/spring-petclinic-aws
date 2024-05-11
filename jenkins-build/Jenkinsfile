@@ -43,18 +43,24 @@ pipeline {
         stage('Tests') {
             parallel {
                 stage ('unitTest') {
-                    timeout(time: 5, unit: 'MINUTES') {
-                        sh './gradlew test'
-                        echo 'Unittest done'
+                    steps {
+                        timeout(time: 8, unit: 'MINUTES') {
+                            sh './gradlew test'
+                            echo 'Unittest done'
+                        }
                     }
                 }
                 stage ('checkStyle') {
-                    sh './gradlew validate'
-                    echo 'checkStyle done'
+                    steps {
+                        sh './gradlew validate'
+                        echo 'checkStyle done'
+                    }
                 }
                 stage ('codeCoverage') {
-                    sh './gradlew jacocoTestReport'
-                    echo 'Code coverage test done'
+                    steps {
+                        sh './gradlew jacocoTestReport'
+                        echo 'Code coverage test done'
+                    }
                 }
             }
         }
