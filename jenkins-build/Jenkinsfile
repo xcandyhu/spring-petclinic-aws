@@ -25,7 +25,7 @@ pipeline {
             }
         }
         stage('Validate CF') {
-            steps{
+            steps {
                 sh "mv jenkins-build/cloud-formation.yaml ${cloudFormationFile}"
                 sh 'ls'
                 withAWS(credentials:"${awsCred}", region:"${awsRegion}"){
@@ -34,9 +34,10 @@ pipeline {
             } 
         }
         stage('Compile') {
-            steps{
+            steps {
                 sh "./gradlew clean build -x test -Pversion=${buildVersion} -DrootProjectName=${buildName}" 
                 //make the jar file name cohesive
+            }
         }
         stage('Tests') {
             parallel unitTest: {
@@ -60,9 +61,9 @@ pipeline {
                 }
             }
         }
-        stage('Publish to S3'){
-            steps{
-                withAWS(credentials:"${awsCred}", region:"${awsRegion}"){
+        stage('Publish to S3') {
+            steps {
+                withAWS(credentials:"${awsCred}", region:"${awsRegion}") {
                     //Upload application code
                     s3Upload(bucket:"${ciBucketName}", file: "build/libs/${buildName}-${buildVersion}.jar", path:"${buildName}/${buildVersion}/")
                     //Upload CloudFormation
@@ -70,12 +71,12 @@ pipeline {
                 }
             }
         }
-        stage('Publish to RC - If main branch'){
+        stage('Publish to RC - If main branch') {
             when {
                 branch 'main'
             }
-            steps{
-                withAWS(credentials:"${awsCred}", region:"${awsRegion}"){
+            steps {
+                withAWS(credentials:"${awsCred}", region:"${awsRegion}") {
                     //Upload application code to release candidate
                     s3Upload(bucket:"${rcBucketName}", file: "build/libs/${buildName}-${buildVersion}.jar", path:"${buildName}/${buildVersion}/")
 
