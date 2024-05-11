@@ -4,9 +4,10 @@ String buildName='spring-petclinic-aws'
 String ciBucketName='xchu-jenkins-artifacts-build-us-east-1'
 String rcBucketName='xchu-jenkins-artifacts-rc-us-east-1'
 String awsCred='lab-aws'
-String awsRegion='lab-aws'
+String awsRegion='us-east-1'
 
-pipeline { 
+pipeline {
+    agent any
     stages { 
         stage ('Choose Version') { 
             steps {
@@ -40,21 +41,17 @@ pipeline {
             }
         }
         stage('Tests') {
-            parallel unitTest: {
+            parallel {
                 stage ('unitTest') {
                     timeout(time: 5, unit: 'MINUTES') {
                         sh './gradlew test'
                         echo 'Unittest done'
                     }
                 }
-            },
-            checkstyle: {
                 stage ('checkStyle') {
                     sh './gradlew validate'
                     echo 'checkStyle done'
                 }
-            },
-            codeCoverage: {
                 stage ('codeCoverage') {
                     sh './gradlew jacocoTestReport'
                     echo 'Code coverage test done'
