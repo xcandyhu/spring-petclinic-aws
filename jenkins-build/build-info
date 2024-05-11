@@ -7,7 +7,7 @@ revisionsSince="0"
 echo "Available" tags
 git tag -l
 
-if semver $(git tag -l) &>/dev/null
+if semver "ignorethis" $(git tag -l) &>/dev/null
 then
     baseVersion=$(semver $(semver $(git tag -l)) | tail -n1)
     echo "Base Version is now: $baseVersion"
