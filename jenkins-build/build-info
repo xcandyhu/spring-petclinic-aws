@@ -27,7 +27,7 @@ branchName=$(git rev-parse --abbrev-ref HEAD | tr / -)
 
 echo $branchName
 
-if [ "$branchName" != "master" ]
+if [ "$branchName" != "main" ]
 then
     calculatedVersion="$calculatedVersion-$branchName"
 fi
