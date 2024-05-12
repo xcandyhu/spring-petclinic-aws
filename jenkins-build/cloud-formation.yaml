@@ -59,7 +59,7 @@ Resources:
     Type: 'AWS::EC2::Instance'
     Properties:
       InstanceType: t2.micro
-      ImageId: LatestAmiId  # Amazon Linux 2 AMI in us-east-1
+      ImageId: !Ref LatestAmiId
       SecurityGroups:
         - !Ref InstanceSecurityGroup
       IamInstanceProfile: !Ref InstanceProfile
