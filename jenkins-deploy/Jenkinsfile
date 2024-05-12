@@ -17,50 +17,39 @@ pipeline{
     stages {
         stage('Set up Deployment variables.'){
             steps{
-                script{
-                    buildVersion = params.version
-                    environment = params.environment
-                    region = params.region
-                    serverPort = params.serverPort
-                    artifactBucket = "xchu-jenkins-artifacts-${buildSource}-us-east-1"
-                    stackName = "${buildName}-${environment}"
-                    appFile = "${buildName}-${buildVersion}.jar"
-                    cfnFile = "cloud-formation-${buildVersion}.yaml"
-                    artifactPath = "${artifactBucket}/${buildName}/${buildVersion}";
-                }
+                buildVersion = params.version
+                environment = params.environment
+                region = params.region
+                serverPort = params.serverPort
+                artifactBucket = "xchu-jenkins-artifacts-${buildSource}-us-east-1"
+                stackName = "${buildName}-${environment}"
+                appFile = "${buildName}-${buildVersion}.jar"
+                cfnFile = "cloud-formation-${buildVersion}.yaml"
+                artifactPath = "${artifactBucket}/${buildName}/${buildVersion}"
             }
         }
 
         stage('Deploy Stack'){
             steps{
                 withAWS(credentials:"${awsCred}", region:"${region}"){
-                    script {
-                        cfnParams = ['ArtifactPath' : "${artifactPath}",
-                            'AppFile': "${appFile}", 'ServerPort': "${serverPort}"];
-                        //Create a CF stack
-                        def outputs = cfnUpdate(
-                            stack:"${stackName}",
-                            url:"https://s3.amazonaws.com/${artifactPath}/${cfnFile}",
-                            params: cfnParams,
-                            timeoutInMinutes:10,
-                            tags:[
-                            "name=${stackName}",
-                            "module=${buildName}",
-                            "environment=${environment}",
-                            "buildVersion=${buildVersion}"],
-                            pollInterval:1000
-                        )
-                    }
-                }
-            }
-        }
-
-        stage('Get server URL') {
-            steps {
-                script {
+                    cfnParams = ['ArtifactPath' : "${artifactPath}",
+                        'AppFile': "${appFile}", 'ServerPort': "${serverPort}"];
+                    //Create a CF stack
+                    outputs = cfnUpdate(
+                        stack:"${stackName}",
+                        url:"https://s3.amazonaws.com/${artifactPath}/${cfnFile}",
+                        params: cfnParams,
+                        timeoutInMinutes:10,
+                        tags:[
+                        "name=${stackName}",
+                        "module=${buildName}",
+                        "environment=${environment}",
+                        "buildVersion=${buildVersion}"],
+                        pollInterval:1000
+                    )
                     echo "Application URL: ${outputs.AppURL}"
                 }
             }
         }
-    }  
+    }
 }
