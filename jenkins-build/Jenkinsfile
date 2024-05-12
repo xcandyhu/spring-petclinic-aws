@@ -52,7 +52,8 @@ pipeline {
                 }
                 stage ('checkStyle') {
                     steps {
-                        sh './gradlew validate'
+                        sh './gradlew formatMain'
+                        sh './gradlew formatTest'
                         echo 'checkStyle done'
                     }
                 }

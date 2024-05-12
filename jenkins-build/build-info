@@ -23,13 +23,12 @@ fi
 echo "Calculating Version."
 calculatedVersion="$baseVersion-$revisionsSince"
 
-branchName=$(git rev-parse --abbrev-ref HEAD | tr / -)
 
-echo $branchName
+echo $BRANCH_NAME
 
-if [ "$branchName" != "main" ]
+if [ "$BRANCH_NAME" != "main" ]
 then
-    calculatedVersion="$calculatedVersion-$branchName"
+    calculatedVersion="$calculatedVersion-$BRANCH_NAME"
 fi
 
 echo "New version is $calculatedVersion"
