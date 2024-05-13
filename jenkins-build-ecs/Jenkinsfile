@@ -69,7 +69,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'dockerd'
+                    sh 'docker -v'
                     // Building the Docker image
                     def dockerImage = "${ecrRegistry}/${buildName}"
                     echo "Start docker build for ${dockerImage}"
