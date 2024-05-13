@@ -59,7 +59,7 @@ Resources:
     Type: 'AWS::EC2::Instance'
     Properties:
       InstanceType: t2.micro
-      ImageId: LatestAmiId  # Amazon Linux 2 AMI in us-east-1
+      ImageId: !Ref LatestAmiId
       SecurityGroups:
         - !Ref InstanceSecurityGroup
       IamInstanceProfile: !Ref InstanceProfile
@@ -75,8 +75,8 @@ Outputs:
   InstanceId:
     Description: The Instance ID
     Value: !Ref EC2Instance
-  WebsiteURL:
+  AppURL:
     Description: URL to access the Java application
     Value: !Sub "http://${EC2Instance.PublicIp}:${ServerPort}"
     Export:
-      Name: ServerURL
+      Name: AppURL

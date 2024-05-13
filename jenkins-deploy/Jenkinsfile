@@ -1,0 +1,59 @@
+String buildVersion
+String buildName='spring-petclinic-aws'
+String ciBucketName='xchu-jenkins-artifacts-build-us-east-1'
+String rcBucketName='xchu-jenkins-artifacts-rc-us-east-1'
+String awsCred='lab-aws'
+String defaultRegion='us-east-1'
+
+pipeline{
+    agent any
+    parameters {
+        string(name: 'version', description: 'Version to Deploy')
+        string(name: 'environment', description: 'Environment to Deploy to')
+        string(name: 'serverPort', defaultValue: '8080', description: 'Port listened on by the application')
+        choice(name: 'region', choices: ["${defaultRegion}",'ca-central-1'], description: 'Deployment Region')
+        choice(name: 'buildSource', choices: ['rc', 'build'], description: 'Bucket artifacts reside in.')
+    }
+    stages {
+        stage('Set up Deployment variables.'){
+            steps{
+                script{
+                    buildVersion = params.version
+                    environment = params.environment
+                    region = params.region
+                    serverPort = params.serverPort
+                    artifactBucket = "xchu-jenkins-artifacts-${buildSource}-us-east-1"
+                    stackName = "${buildName}-${environment}"
+                    appFile = "${buildName}-${buildVersion}.jar"
+                    cfnFile = "cloud-formation-${buildVersion}.yaml"
+                    artifactPath = "${artifactBucket}/${buildName}/${buildVersion}";
+                }
+            }
+        }
+
+        stage('Deploy Stack'){
+            steps{
+                withAWS(credentials:"${awsCred}", region:"${region}"){
+                    script {
+                        cfnParams = ['ArtifactPath' : "${artifactPath}",
+                            'AppFile': "${appFile}", 'ServerPort': "${serverPort}"];
+                        //Create a CF stack
+                        def outputs = cfnUpdate(
+                            stack:"${stackName}",
+                            url:"https://s3.amazonaws.com/${artifactPath}/${cfnFile}",
+                            params: cfnParams,
+                            timeoutInMinutes:10,
+                            tags:[
+                            "name=${stackName}",
+                            "module=${buildName}",
+                            "environment=${environment}",
+                            "buildVersion=${buildVersion}"],
+                            pollInterval:1000
+                        )
+                        echo "Application URL: ${outputs.AppURL}"
+                    }
+                }
+            }
+        }
+    }  
+}
