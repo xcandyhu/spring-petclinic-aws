@@ -79,7 +79,7 @@ pipeline {
         }
         stage('Push Docker Image') {
             steps {
-                script {
+                withAWS(credentials:"${awsCred}", region:"${awsRegion}") {
                     // Log in to Amazon ECR
                     sh "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws"
                     // Push the Docker image
