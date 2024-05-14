@@ -81,7 +81,7 @@ pipeline {
             steps {
                 script {
                     // Log in to Amazon ECR
-                    sh "aws ecr-public get-login-password | docker login --username AWS --password-stdin ${ecrRegistry}"
+                    sh "aws ecr-public get-login-password | docker login --username AWS --password-stdin ${ecrRegistry} --region ${awsRegion}"
                     // Push the Docker image
                     sh "docker push ${dockerImage}:${buildVersion}"
                     // Print the Docker image tag
