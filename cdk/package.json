@@ -1,8 +1,8 @@
 {
-  "name": "cdk",
+  "name": "Petclinic",
   "version": "0.1.0",
   "bin": {
-    "cdk": "bin/cdk.js"
+    "cdk": "bin/app.ts"
   },
   "scripts": {
     "build": "tsc",
