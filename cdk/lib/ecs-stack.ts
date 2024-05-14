@@ -2,7 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 
 interface EcsStackProps extends cdk.StackProps {
   readonly imageTag: string;
@@ -27,7 +27,9 @@ class EcsStack extends cdk.Stack {
       maxCapacity: 1
     });
 
-    const taskDefinition = new ecs.Ec2TaskDefinition(this, 'TaskDef');
+    const taskDefinition = new ecs.Ec2TaskDefinition(this, 'TaskDef', {
+      networkMode: ecs.NetworkMode.AWS_VPC,
+    });
     const container = taskDefinition.addContainer('web', {
       image: ecs.ContainerImage.fromRegistry(`public.ecr.aws/a4b5x1e9/${props.ecrRepo}:${props.imageTag}`),
       memoryLimitMiB: 512,
@@ -39,9 +41,33 @@ class EcsStack extends cdk.Stack {
       protocol: ecs.Protocol.TCP,
     });
 
-    new ecs.Ec2Service(this, 'Ec2Service', {
+    const albSecurityGroup = new ec2.SecurityGroup(this, 'AlbSecurityGroup', {
+      vpc,
+      allowAllOutbound: true,
+      description: 'Allow inbound HTTP traffic',
+    });
+    albSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80));
+
+    const serviceSecurityGroup = new ec2.SecurityGroup(this, 'ServiceSecurityGroup', {
+      vpc,
+      allowAllOutbound: true,
+      description: 'Allow inbound traffic from ALB',
+    });
+    serviceSecurityGroup.addIngressRule(albSecurityGroup, ec2.Port.tcp(props.containerPort));
+
+    const alb = new elbv2.ApplicationLoadBalancer(this, 'alb', { vpc, internetFacing: true });
+    const listener = alb.addListener('listener', { port: 80 });
+
+    const ecsService = new ecs.Ec2Service(this, 'Ec2Service', {
       cluster,
-      taskDefinition
+      taskDefinition,
+      desiredCount: 1,
+      securityGroups: [serviceSecurityGroup],
+    });
+
+    listener.addTargets('ECS', {
+      port: 80,
+      targets: [ecsService],
     });
   }
 }
