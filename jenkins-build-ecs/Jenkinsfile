@@ -71,7 +71,7 @@ pipeline {
                 script {
                     sh 'docker -v'
                     // Building the Docker image
-                    def dockerImage = "${ecrRegistry}/${buildName}"
+                    dockerImage = "${ecrRegistry}/${buildName}"
                     echo "Start docker build for ${dockerImage}"
                     sh "docker build -t ${dockerImage}:${buildVersion} --build-arg JAR_FILE=${buildName}-${buildVersion}.jar -f jenkins-build-ecs/Dockerfile ."
                 }
