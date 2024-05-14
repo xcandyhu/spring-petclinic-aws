@@ -37,6 +37,7 @@ pipeline{
                     withAWS(credentials:"${awsCred}", region:"${region}"){
                         script {
                             sh 'npm install'
+                            sh 'cdk bootstrap'
                             sh "cdk deploy --require-approval never --context imageTag=${buildVersion} \
                                 --context ecrRepo=${buildName} --context containerPort=${serverPort} \
                                 --context stackName=${stackName}"
