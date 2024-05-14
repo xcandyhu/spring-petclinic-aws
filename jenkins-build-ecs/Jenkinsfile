@@ -86,6 +86,7 @@ pipeline {
                         def repoExists = sh(script: "aws ecr-public describe-repositories --repository-names ${buildName} || echo 'false'", returnStdout: true).trim()
                         if (repoExists == 'false') {
                             sh "aws ecr-public create-repository --repository-name ${buildName}"
+                            echo "repository ${buildName} created"
                         }
                     }
                     // Push the Docker image
