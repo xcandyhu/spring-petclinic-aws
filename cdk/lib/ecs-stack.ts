@@ -27,7 +27,7 @@ class EcsStack extends cdk.Stack {
       maxCapacity: 1
     });
 
-    const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef');
+    const taskDefinition = new ecs.Ec2TaskDefinition(this, 'TaskDef');
     const container = taskDefinition.addContainer('web', {
       image: ecs.ContainerImage.fromRegistry(`public.ecr.aws/a4b5x1e9/${props.ecrRepo}:${props.imageTag}`),
       memoryLimitMiB: 512,
