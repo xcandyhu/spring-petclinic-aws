@@ -33,14 +33,14 @@ pipeline{
 
         stage('Deploy Stack'){
             steps{
-                withAWS(credentials:"${awsCred}", region:"${region}"){
-                    script {
-                        sh 'cd cdk'
-                        sh 'npm install'
-                        sh "cdk deploy --require-approval never --context imageTag=${buildVersion} \
-                            --context ecrRepo=${buildName} --context containerPort=${serverPort} \
-                            --context stackName=${stackName}"
-                        sh 'cd ..'
+                dir('cdk') {
+                    withAWS(credentials:"${awsCred}", region:"${region}"){
+                        script {
+                            sh 'npm install'
+                            sh "cdk deploy --require-approval never --context imageTag=${buildVersion} \
+                                --context ecrRepo=${buildName} --context containerPort=${serverPort} \
+                                --context stackName=${stackName}"
+                        }
                     }
                 }
             }
