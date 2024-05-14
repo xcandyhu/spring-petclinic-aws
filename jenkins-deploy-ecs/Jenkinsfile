@@ -38,7 +38,6 @@ pipeline{
                         withEnv(["CDK_DEFAULT_ACCOUNT=${env.AWS_ACCOUNT_ID}", "CDK_DEFAULT_REGION=${region}"]) {
                             script {
                                 sh 'npm install'
-                                sh 'cdk bootstrap'
                                 sh "cdk deploy --require-approval never --context imageTag=${buildVersion} \
                                     --context ecrRepo=${buildName} --context containerPort=${serverPort} \
                                     --context stackName=${stackName}"
