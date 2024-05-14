@@ -96,29 +96,7 @@ pipeline {
                 }
             }
         }
-        stage('Publish to S3') {
-            steps {
-                withAWS(credentials:"${awsCred}", region:"${awsRegion}") {
-                    //Upload CloudFormation
-                    s3Upload(bucket:"${ciBucketName}", file: "${cloudFormationFile}", path:"${buildName}/${buildVersion}/")
-                }
-            }
-        }
-        stage('Publish to RC - If main branch') {
-            when {
-                branch 'main'
-            }
-            steps {
-                withAWS(credentials:"${awsCred}", region:"${awsRegion}") {
-                    //Upload CloudFormation to release candidate
-                    s3Upload(bucket:"${rcBucketName}", file: "${cloudFormationFile}", path:"${buildName}/${buildVersion}/")
-
-                    //Upload Build_info to release candidate
-                    s3Upload(bucket:"${rcBucketName}", file: "${env.WORKSPACE}/generated/BUILD_INFO.txt", path:"${buildName}/${buildVersion}/")
-                    
-                }
-            }
-        }
+        
         stage('Publish Report Html') {
             steps {
                 echo 'Publishing unittest report...'

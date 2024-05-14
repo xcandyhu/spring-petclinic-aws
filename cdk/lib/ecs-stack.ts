@@ -30,10 +30,10 @@ class EcsStack extends cdk.Stack {
     const taskDefinition = new ecs.Ec2TaskDefinition(this, 'TaskDef', {
       networkMode: ecs.NetworkMode.AWS_VPC,
     });
-    const container = taskDefinition.addContainer('web', {
+    const container = taskDefinition.addContainer('clinic', {
       image: ecs.ContainerImage.fromRegistry(`public.ecr.aws/a4b5x1e9/${props.ecrRepo}:${props.imageTag}`),
       memoryLimitMiB: 512,
-      logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'ecs' })
+      logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'ecsclinic' })
     });
 
     container.addPortMappings({
@@ -58,7 +58,7 @@ class EcsStack extends cdk.Stack {
     const alb = new elbv2.ApplicationLoadBalancer(this, 'alb', { vpc, internetFacing: true });
     const listener = alb.addListener('listener', { port: 80 });
 
-    const ecsService = new ecs.Ec2Service(this, 'Ec2Service', {
+    const ecsService = new ecs.Ec2Service(this, 'ClinicService', {
       cluster,
       taskDefinition,
       desiredCount: 1,
@@ -68,6 +68,11 @@ class EcsStack extends cdk.Stack {
     listener.addTargets('ECS', {
       port: 80,
       targets: [ecsService],
+    });
+
+    new cdk.CfnOutput(this, 'ALBDnsName', {
+      value: alb.loadBalancerDnsName,
+      description: 'The DNS name of the Application Load Balancer',
     });
   }
 }

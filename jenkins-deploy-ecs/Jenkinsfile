@@ -12,7 +12,6 @@ pipeline{
         string(name: 'environment', description: 'Environment to Deploy to')
         string(name: 'serverPort', defaultValue: '8080', description: 'Port listened on by the application')
         choice(name: 'region', choices: ["${defaultRegion}",'ca-central-1'], description: 'Deployment Region')
-        choice(name: 'buildSource', choices: ['rc', 'build'], description: 'Bucket artifacts reside in.')
     }
     stages {
         stage('Set up Deployment variables.'){
@@ -22,11 +21,7 @@ pipeline{
                     environment = params.environment
                     region = params.region
                     serverPort = params.serverPort
-                    artifactBucket = "xchu-jenkins-artifacts-${buildSource}-us-east-1"
                     stackName = "${buildName}-${environment}"
-                    appFile = "${buildName}-${buildVersion}.jar"
-                    cfnFile = "cloud-formation-${buildVersion}.yaml"
-                    artifactPath = "${artifactBucket}/${buildName}/${buildVersion}";
                 }
             }
         }
@@ -38,9 +33,10 @@ pipeline{
                         withEnv(["CDK_DEFAULT_ACCOUNT=${env.AWS_ACCOUNT_ID}", "CDK_DEFAULT_REGION=${region}"]) {
                             script {
                                 sh 'npm install'
-                                sh "cdk deploy --require-approval never --context imageTag=${buildVersion} \
+                                def output = sh(script: "cdk deploy --require-approval never --context imageTag=${buildVersion} \
                                     --context ecrRepo=${buildName} --context containerPort=${serverPort} \
-                                    --context stackName=${stackName}"
+                                    --context stackName=${stackName}", returnStdout: true).trim()
+                                echo "Petclinic URL is ${output}"
                             }
                         }
                     }
