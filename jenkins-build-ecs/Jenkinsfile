@@ -82,10 +82,14 @@ pipeline {
                 withAWS(credentials:"${awsCred}", region:"${awsRegion}") {
                     // Log in to Amazon ECR
                     sh "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws"
+                    def repoExists = sh(script: "aws ecr-public describe-repositories --repository-names ${buildName} || echo 'false'", returnStdout: true).trim()
+                    if (repoExists == 'false') {
+                        sh "aws ecr-public create-repository --repository-name ${buildName}"
+                    }
                     // Push the Docker image
                     sh "docker push ${dockerImage}:${buildVersion}"
                     // Print the Docker image tag
-                    echo "Docker Image: ${dockerImage}:${buildVersion}"
+                    echo "Docker Image: ${dockerImage}:${buildVersion} pushed to ECR public"
                 }
             }
         }
