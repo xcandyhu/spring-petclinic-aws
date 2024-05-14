@@ -1,4 +1,5 @@
-import * as cdk from 'aws-cdk-lib/core';
+import * as cdk from 'aws-cdk-lib';
+import { Construct } from 'constructs';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
@@ -10,7 +11,7 @@ interface EcsStackProps extends cdk.StackProps {
 }
 
 class EcsStack extends cdk.Stack {
-  constructor(scope: cdk.Construct, id: string, props: EcsStackProps) {
+  constructor(scope: Construct, id: string, props: EcsStackProps) {
     super(scope, id, props);
 
     const vpc = ec2.Vpc.fromLookup(this, 'Vpc', { isDefault: true });

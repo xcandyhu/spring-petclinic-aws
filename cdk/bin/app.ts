@@ -1,7 +1,8 @@
-import * as cdk from 'aws-cdk-lib/core';
+import * as cdk from 'aws-cdk-lib';
 import { EcsStack } from '../lib/ecs-stack';
 
 const app = new cdk.App();
+
 new EcsStack(app, 'EcsStack', {
   imageTag: app.node.tryGetContext('imageTag'),
   ecrRepo: app.node.tryGetContext('ecrRepo'),
