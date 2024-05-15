@@ -5,6 +5,8 @@
 <suppressions>
 	<suppress files="node_modules[\\/].*" checks=".*"/>
 	<suppress files="node[\\/].*" checks=".*"/>
+	<suppress files="cdk[\\/].*" checks=".*"/>
+	<suppress files="jenkins.*[\\/].*" checks=".*"/>
 	<suppress files="build[\\/].*" checks=".*"/>
 	<suppress files="target[\\/].*" checks=".*"/>
 	<suppress files=".+\.(jar|git|ico|p12|gif|jks|jpg|svg|log)" checks="NoHttp"/>

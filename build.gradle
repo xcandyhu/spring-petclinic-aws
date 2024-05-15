@@ -88,4 +88,3 @@ checkFormatAotTest.enabled = false
 formatAot.enabled = false
 formatAotTest.enabled = false
 
-test.finalizedBy(jacocoTestReport)

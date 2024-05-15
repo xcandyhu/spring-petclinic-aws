@@ -43,7 +43,7 @@ fi
 
 mkdir -p generated
 echo "build.version=$calculatedVersion" > ./generated/BUILD_INFO.txt
-echo "git.branch.name=$branchName" >> ./generated/BUILD_INFO.txt
+echo "git.branch.name=$BRANCH_NAME" >> ./generated/BUILD_INFO.txt
 echo "git.commit.hash=$(git rev-parse HEAD)" >> ./generated/BUILD_INFO.txt
 echo "git.commit.short=$(git rev-parse --short HEAD)" >> ./generated/BUILD_INFO.txt
     

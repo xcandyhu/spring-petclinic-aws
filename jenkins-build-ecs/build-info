@@ -12,17 +12,16 @@ then
     baseVersion=$(semver $(semver $(git tag -l)) | tail -n1)
     echo "Base Version is now: $baseVersion"
 fi
-
+# only count src code or build script change 
 if [ "$baseVersion" = "0.0.0" ]
 then
-    revisionsSince=$(git rev-list --count HEAD)
+    revisionsSince=$(git rev-list HEAD --count -- jenkins-build-ecs src)
 else
-    revisionsSince=$(git rev-list "$baseVersion"..HEAD --count)
+    revisionsSince=$(git rev-list "$baseVersion"..HEAD --count -- jenkins-build-ecs src)
 fi
 
 echo "Calculating Version."
 calculatedVersion="$baseVersion-$revisionsSince"
-
 
 echo $BRANCH_NAME
 
@@ -43,7 +42,7 @@ fi
 
 mkdir -p generated
 echo "build.version=$calculatedVersion" > ./generated/BUILD_INFO.txt
-echo "git.branch.name=$branchName" >> ./generated/BUILD_INFO.txt
+echo "git.branch.name=$BRANCH_NAME" >> ./generated/BUILD_INFO.txt
 echo "git.commit.hash=$(git rev-parse HEAD)" >> ./generated/BUILD_INFO.txt
 echo "git.commit.short=$(git rev-parse --short HEAD)" >> ./generated/BUILD_INFO.txt
     

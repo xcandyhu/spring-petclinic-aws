@@ -16,83 +16,93 @@ pipeline {
                 sh 'rm -rf generated' 
                 sh 'mkdir generated'
                 echo 'Choosing Version'
-                sh 'chmod 755 ./jenkins-build/build-info'
-                sh './jenkins-build/build-info'
+                sh 'chmod 755 ./jenkins-build-ecs/build-info'
+                sh './jenkins-build-ecs/build-info'
                 script {
                     def buildProperties = readProperties file: "${env.WORKSPACE}/generated/BUILD_INFO.txt"
                     buildVersion = buildProperties.get('build.version')
                     branchName = buildProperties.get('git.branch.name') 
-                    cloudFormationFile="./generated/cloud-formation-${buildVersion}.yaml"
+                    dockerImage = "${ecrRegistry}/${buildName}:${buildVersion}"
                 }
             }
-        }
-        stage('Validate CF') {
-            steps {
-                sh "mv jenkins-build/cloud-formation.yaml ${cloudFormationFile}"
-                sh 'ls'
-                withAWS(credentials:"${awsCred}", region:"${awsRegion}"){
-                    cfnValidate(file:"${cloudFormationFile}")
-                }
-            } 
         }
         stage('Compile') {
             steps {
                 sh "./gradlew clean build -x test -Pversion=${buildVersion} -DrootProjectName=${buildName}" 
-                //make the jar file name cohesive
             }
         }
-        stage('Tests') {
-            parallel {
-                stage ('unitTest') {
-                    steps {
-                        timeout(time: 8, unit: 'MINUTES') {
-                            //sh './gradlew test'
-                            echo 'Unittest done'
+        stage ('unitTest') {
+            steps {
+                timeout(time: 8, unit: 'MINUTES') {
+                    sh './gradlew test'
+                    echo 'Unittest done'
+                }
+            }
+        }
+        stage ('checkStyle') {
+            steps {
+                sh './gradlew formatMain'
+                sh './gradlew formatTest'
+                echo 'checkStyle done'
+            }
+        }
+        stage ('codeCoverage') {
+            steps {
+                sh './gradlew jacocoTestReport'
+                echo 'Code coverage test done'
+            }
+        }
+
+        stage('Check Image Existence') {
+            // Check if the Docker image exists in the registry, if yes, no build or push (meaning no application code change)
+            steps {
+                withAWS(credentials:"${awsCred}", region:"${awsRegion}") {
+                    script {
+                        // Log in to Amazon ECR, for public repos region is always us-east-1
+                        sh "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws"
+                        def imageExists = sh(script: "aws ecr-public describe-images --repository-name ${buildName} --image-ids imageTag=${buildVersion} --region us-east-1 || true", returnStdout: true).trim()
+                        if (imageExists.contains("imageTag")) {
+                            echo "Image ${dockerImage} already exists in the registry."
+                        } else {
+                            echo "Image ${dockerImage} does not exist in the registry. Proceeding to build."
+                            // Update build flag
+                            env.BUILD_DOCKER = 'true'
                         }
-                    }
-                }
-                stage ('checkStyle') {
-                    steps {
-                        sh './gradlew formatMain'
-                        sh './gradlew formatTest'
-                        echo 'checkStyle done'
-                    }
-                }
-                stage ('codeCoverage') {
-                    steps {
-                        sh './gradlew jacocoTestReport'
-                        echo 'Code coverage test done'
                     }
                 }
             }
         }
         stage('Build Docker Image') {
+            when {
+                expression { return env.BUILD_DOCKER == 'true' }
+            }
             steps {
                 script {
-                    sh 'docker -v'
-                    // Building the Docker image
-                    dockerImage = "${ecrRegistry}/${buildName}"
                     echo "Start docker build for ${dockerImage}"
-                    sh "docker build -t ${dockerImage}:${buildVersion} --build-arg JAR_FILE=${buildName}-${buildVersion}.jar -f jenkins-build-ecs/Dockerfile ."
+
+                    // Building the Docker image using Docker Pipeline plugin
+                    def customDockerfile = "jenkins-build-ecs/Dockerfile"
+                    def buildArgs = "--build-arg JAR_FILE=${buildName}-${buildVersion}.jar"
+                    docker.build(dockerImage, "${buildArgs} -f ${customDockerfile} .")
                 }
             }
         }
         stage('Push Docker Image') {
+            when {
+                expression { return env.BUILD_DOCKER == 'true' }
+            }
             steps {
                 withAWS(credentials:"${awsCred}", region:"${awsRegion}") {
-                    // Log in to Amazon ECR
-                    sh "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws"
                     script {
+                        // create the repo is it's not already created
                         def repoExists = sh(script: "aws ecr-public describe-repositories --repository-names ${buildName} || echo 'false'", returnStdout: true).trim()
                         if (repoExists == 'false') {
                             sh "aws ecr-public create-repository --repository-name ${buildName}"
                             echo "repository ${buildName} created"
                         }
                     }
-                    // Push the Docker image
-                    sh "docker push ${dockerImage}:${buildVersion}"
-                    // Print the Docker image tag
-                    echo "Docker Image: ${dockerImage}:${buildVersion} pushed to ECR public"
+                    sh "docker push ${dockerImage}"
+                    echo "Docker Image: ${dockerImage} pushed to ECR public"
                 }
             }
         }
