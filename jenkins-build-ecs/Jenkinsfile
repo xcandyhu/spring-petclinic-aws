@@ -1,0 +1,138 @@
+String buildVersion
+String environment='CI'
+String buildName='spring-petclinic-aws'
+String ciBucketName='xchu-jenkins-artifacts-build-us-east-1'
+String rcBucketName='xchu-jenkins-artifacts-rc-us-east-1'
+String awsCred='lab-aws'
+String awsRegion='us-east-1'
+String ecrRegistry = "public.ecr.aws/a4b5x1e9"
+
+pipeline {
+    agent any
+    stages { 
+        stage ('Choose Version') { 
+            steps {
+                // calculate version from git tags and commit history
+                sh 'rm -rf generated' 
+                sh 'mkdir generated'
+                echo 'Choosing Version'
+                sh 'chmod 755 ./jenkins-build-ecs/build-info'
+                sh './jenkins-build-ecs/build-info'
+                script {
+                    def buildProperties = readProperties file: "${env.WORKSPACE}/generated/BUILD_INFO.txt"
+                    buildVersion = buildProperties.get('build.version')
+                    branchName = buildProperties.get('git.branch.name') 
+                    dockerImage = "${ecrRegistry}/${buildName}:${buildVersion}"
+                }
+            }
+        }
+        stage('Compile') {
+            steps {
+                sh "./gradlew clean build -x test -Pversion=${buildVersion} -DrootProjectName=${buildName}" 
+            }
+        }
+        stage ('unitTest') {
+            steps {
+                timeout(time: 8, unit: 'MINUTES') {
+                    sh './gradlew test'
+                    echo 'Unittest done'
+                }
+            }
+        }
+        stage ('checkStyle') {
+            steps {
+                sh './gradlew formatMain'
+                sh './gradlew formatTest'
+                echo 'checkStyle done'
+            }
+        }
+        stage ('codeCoverage') {
+            steps {
+                sh './gradlew jacocoTestReport'
+                echo 'Code coverage test done'
+            }
+        }
+
+        stage('Check Image Existence') {
+            // Check if the Docker image exists in the registry, if yes, no build or push (meaning no application code change)
+            steps {
+                withAWS(credentials:"${awsCred}", region:"${awsRegion}") {
+                    script {
+                        // Log in to Amazon ECR, for public repos region is always us-east-1
+                        sh "aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws"
+                        def imageExists = sh(script: "aws ecr-public describe-images --repository-name ${buildName} --image-ids imageTag=${buildVersion} --region us-east-1 || true", returnStdout: true).trim()
+                        if (imageExists.contains("imageTag")) {
+                            echo "Image ${dockerImage} already exists in the registry."
+                        } else {
+                            echo "Image ${dockerImage} does not exist in the registry. Proceeding to build."
+                            // Update build flag
+                            env.BUILD_DOCKER = 'true'
+                        }
+                    }
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            when {
+                expression { return env.BUILD_DOCKER == 'true' }
+            }
+            steps {
+                script {
+                    echo "Start docker build for ${dockerImage}"
+
+                    // Building the Docker image using Docker Pipeline plugin
+                    def customDockerfile = "jenkins-build-ecs/Dockerfile"
+                    def buildArgs = "--build-arg JAR_FILE=${buildName}-${buildVersion}.jar"
+                    docker.build(dockerImage, "${buildArgs} -f ${customDockerfile} .")
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            when {
+                expression { return env.BUILD_DOCKER == 'true' }
+            }
+            steps {
+                withAWS(credentials:"${awsCred}", region:"${awsRegion}") {
+                    script {
+                        // create the repo is it's not already created
+                        def repoExists = sh(script: "aws ecr-public describe-repositories --repository-names ${buildName} || echo 'false'", returnStdout: true).trim()
+                        if (repoExists == 'false') {
+                            sh "aws ecr-public create-repository --repository-name ${buildName}"
+                            echo "repository ${buildName} created"
+                        }
+                    }
+                    sh "docker push ${dockerImage}"
+                    echo "Docker Image: ${dockerImage} pushed to ECR public"
+                }
+            }
+        }
+        
+        stage('Publish Report Html') {
+            steps {
+                echo 'Publishing unittest report...'
+                publishHTML([allowMissing: true,
+                             alwaysLinkToLastBuild: true,
+                             keepAll: true,
+                             reportDir: 'build/reports/tests/test',
+                             reportFiles: 'index.html',
+                             reportName: 'Unittest Report',
+                             reportTitles: 'The unittest report'])
+                echo 'Publishing jacoco report...'
+                publishHTML([allowMissing: true,
+                             alwaysLinkToLastBuild: true,
+                             keepAll: true,
+                             reportDir: 'build/reports/jacoco/test/html',
+                             reportFiles: 'index.html',
+                             reportName: 'Jacoco Coverage Report',
+                             reportTitles: 'The coverage report by jacoco'])
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'generated/**'
+            echo 'Cleaning up...'
+            cleanWs()
+        }
+    }
+}

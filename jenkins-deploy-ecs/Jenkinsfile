@@ -1,0 +1,47 @@
+String buildVersion
+String buildName='spring-petclinic-aws'
+String ciBucketName='xchu-jenkins-artifacts-build-us-east-1'
+String rcBucketName='xchu-jenkins-artifacts-rc-us-east-1'
+String awsCred='lab-aws'
+String defaultRegion='us-east-1'
+
+pipeline{
+    agent any
+    parameters {
+        string(name: 'version', description: 'Version to Deploy')
+        string(name: 'environment', description: 'Environment to Deploy to')
+        string(name: 'serverPort', defaultValue: '8080', description: 'Port listened on by the application')
+        choice(name: 'region', choices: ["${defaultRegion}",'ca-central-1'], description: 'Deployment Region')
+    }
+    stages {
+        stage('Set up Deployment variables.'){
+            steps{
+                script{
+                    buildVersion = params.version
+                    environment = params.environment
+                    region = params.region
+                    serverPort = params.serverPort
+                    stackName = "${buildName}-${environment}"
+                }
+            }
+        }
+
+        stage('Deploy Stack'){
+            steps{
+                dir('cdk') {
+                    withAWS(credentials:"${awsCred}", region:"${region}"){
+                        withEnv(["CDK_DEFAULT_ACCOUNT=${env.AWS_ACCOUNT_ID}", "CDK_DEFAULT_REGION=${region}"]) {
+                            script {
+                                sh 'npm install'
+                                def output = sh(script: "cdk deploy --require-approval never --context imageTag=${buildVersion} \
+                                    --context ecrRepo=${buildName} --context containerPort=${serverPort} \
+                                    --context stackName=${stackName}", returnStdout: true).trim()
+                                echo "Petclinic URL is ${output}"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }  
+}
