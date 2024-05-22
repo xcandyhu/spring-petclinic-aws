@@ -28,6 +28,7 @@ pipeline{
             steps{
                 dir('cdk') {
                     withAWS(credentials:"${awsCred}", region:"${region}"){
+                        // env var of jenkins pipeline can't be used within script, hence has be be passed as env
                         withEnv(["CDK_DEFAULT_ACCOUNT=${env.AWS_ACCOUNT_ID}", "CDK_DEFAULT_REGION=${region}"]) {
                             script {
                                 sh 'npm install'

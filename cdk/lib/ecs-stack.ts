@@ -54,7 +54,11 @@ class EcsStack extends cdk.Stack {
     });
     serviceSecurityGroup.addIngressRule(albSecurityGroup, ec2.Port.tcp(8080));
 
-    const alb = new elbv2.ApplicationLoadBalancer(this, 'alb', { vpc, internetFacing: true });
+    const alb = new elbv2.ApplicationLoadBalancer(this, 'alb', { 
+      vpc, 
+      internetFacing: true,
+      securityGroup: albSecurityGroup
+    });
     const listener = alb.addListener('listener', { port: 80 });
 
     const ecsService = new ecs.Ec2Service(this, 'ClinicService', {
