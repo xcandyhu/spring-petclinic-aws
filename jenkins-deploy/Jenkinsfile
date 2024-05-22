@@ -38,7 +38,7 @@ pipeline{
                         cfnParams = ['ArtifactPath' : "${artifactPath}",
                             'AppFile': "${appFile}", 'ServerPort': "${serverPort}"];
                         //Create a CF stack
-                        def outputs = cfnUpdate(
+                        outputs = cfnUpdate(
                             stack:"${stackName}",
                             url:"https://s3.amazonaws.com/${artifactPath}/${cfnFile}",
                             params: cfnParams,
@@ -50,9 +50,14 @@ pipeline{
                             "buildVersion=${buildVersion}"],
                             pollInterval:1000
                         )
-                        echo "Application URL: ${outputs.AppURL}"
                     }
                 }
+            }
+        }
+
+        stage('Report URL'){
+            steps{
+                echo "Petclinic URL is ${outputs.AppURL}"
             }
         }
     }  

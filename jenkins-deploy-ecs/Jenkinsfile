@@ -28,16 +28,24 @@ pipeline{
             steps{
                 dir('cdk') {
                     withAWS(credentials:"${awsCred}", region:"${region}"){
-                        // env var of jenkins pipeline can't be used within script, hence has be be passed as env
+                        // env var of jenkins pipeline can't be used within script block, hence has to be passed as env
                         withEnv(["CDK_DEFAULT_ACCOUNT=${env.AWS_ACCOUNT_ID}", "CDK_DEFAULT_REGION=${region}"]) {
                             script {
-                                sh 'npm install'
-                                def output = sh(script: "cdk deploy --require-approval never --context imageTag=${buildVersion} \
+                                sh 'npm install' // install dependencies in package.json
+                                output = sh(script: "cdk deploy --require-approval never --context imageTag=${buildVersion} \
                                     --context ecrRepo=${buildName} --context stackName=${stackName}", returnStdout: true).trim()
-                                echo "Petclinic URL is ${output}"
                             }
                         }
                     }
+                }
+            }
+        }
+
+        stage('Report URL'){
+            steps{
+                script {
+                    def albDnsName = output.readLines().findAll { it.trim().startsWith('EcsStack.ALBDnsName') }.collect { it.split('=')[1].trim() }[0]
+                    echo "Petclinic URL is http://${albDnsName}"
                 }
             }
         }

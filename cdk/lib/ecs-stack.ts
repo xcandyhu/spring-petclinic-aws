@@ -15,10 +15,9 @@ class EcsStack extends cdk.Stack {
 
     const vpc = ec2.Vpc.fromLookup(this, 'Vpc', { isDefault: true });
 
-    // Create an ECS cluster
+    // Create an ECS cluster and add EC2 capacity
     const cluster = new ecs.Cluster(this, 'Cluster', { vpc });
 
-    // Add EC2 capacity to the cluster
     cluster.addCapacity('DefaultAutoScalingGroupCapacity', {
       instanceType: new ec2.InstanceType('t2.micro'),
       desiredCapacity: 1,
@@ -26,6 +25,7 @@ class EcsStack extends cdk.Stack {
       maxCapacity: 1
     });
 
+    // Create a task definition and add a container
     const taskDefinition = new ecs.Ec2TaskDefinition(this, 'TaskDef', {
       networkMode: ecs.NetworkMode.AWS_VPC,
     });
@@ -40,6 +40,7 @@ class EcsStack extends cdk.Stack {
       protocol: ecs.Protocol.TCP,
     });
 
+    // create two SGs, one for the alb and one for the ECS service
     const albSecurityGroup = new ec2.SecurityGroup(this, 'AlbSecurityGroup', {
       vpc,
       allowAllOutbound: true,
@@ -54,6 +55,7 @@ class EcsStack extends cdk.Stack {
     });
     serviceSecurityGroup.addIngressRule(albSecurityGroup, ec2.Port.tcp(8080));
 
+    // create the alb and ECS service and add the latter as a target group
     const alb = new elbv2.ApplicationLoadBalancer(this, 'alb', { 
       vpc, 
       internetFacing: true,
