@@ -10,7 +10,6 @@ pipeline{
     parameters {
         string(name: 'version', description: 'Version to Deploy')
         string(name: 'environment', description: 'Environment to Deploy to')
-        string(name: 'serverPort', defaultValue: '8080', description: 'Port listened on by the application')
         choice(name: 'region', choices: ["${defaultRegion}",'ca-central-1'], description: 'Deployment Region')
     }
     stages {
@@ -20,7 +19,6 @@ pipeline{
                     buildVersion = params.version
                     environment = params.environment
                     region = params.region
-                    serverPort = params.serverPort
                     stackName = "${buildName}-${environment}"
                 }
             }
@@ -34,8 +32,7 @@ pipeline{
                             script {
                                 sh 'npm install'
                                 def output = sh(script: "cdk deploy --require-approval never --context imageTag=${buildVersion} \
-                                    --context ecrRepo=${buildName} --context containerPort=${serverPort} \
-                                    --context stackName=${stackName}", returnStdout: true).trim()
+                                    --context ecrRepo=${buildName} --context stackName=${stackName}", returnStdout: true).trim()
                                 echo "Petclinic URL is ${output}"
                             }
                         }

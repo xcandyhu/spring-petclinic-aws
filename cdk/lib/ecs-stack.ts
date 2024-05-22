@@ -7,7 +7,6 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 interface EcsStackProps extends cdk.StackProps {
   readonly imageTag: string;
   readonly ecrRepo: string;
-  readonly containerPort: number;
 }
 
 class EcsStack extends cdk.Stack {
@@ -37,7 +36,7 @@ class EcsStack extends cdk.Stack {
     });
 
     container.addPortMappings({
-      containerPort: props.containerPort,
+      containerPort: 8080,
       protocol: ecs.Protocol.TCP,
     });
 
@@ -53,7 +52,7 @@ class EcsStack extends cdk.Stack {
       allowAllOutbound: true,
       description: 'Allow inbound traffic from ALB',
     });
-    serviceSecurityGroup.addIngressRule(albSecurityGroup, ec2.Port.tcp(props.containerPort));
+    serviceSecurityGroup.addIngressRule(albSecurityGroup, ec2.Port.tcp(8080));
 
     const alb = new elbv2.ApplicationLoadBalancer(this, 'alb', { vpc, internetFacing: true });
     const listener = alb.addListener('listener', { port: 80 });

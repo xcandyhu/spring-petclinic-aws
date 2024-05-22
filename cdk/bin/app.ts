@@ -12,6 +12,5 @@ new EcsStack(app, 'EcsStack', {
   env: env,
   imageTag: app.node.tryGetContext('imageTag'),
   ecrRepo: app.node.tryGetContext('ecrRepo'),
-  containerPort: parseInt(app.node.tryGetContext('containerPort')),
   stackName: app.node.tryGetContext('stackName')
 });
