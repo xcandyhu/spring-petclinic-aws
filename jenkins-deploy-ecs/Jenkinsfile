@@ -10,7 +10,6 @@ pipeline{
     parameters {
         string(name: 'version', description: 'Version to Deploy')
         string(name: 'environment', description: 'Environment to Deploy to')
-        string(name: 'serverPort', defaultValue: '8080', description: 'Port listened on by the application')
         choice(name: 'region', choices: ["${defaultRegion}",'ca-central-1'], description: 'Deployment Region')
     }
     stages {
@@ -20,7 +19,6 @@ pipeline{
                     buildVersion = params.version
                     environment = params.environment
                     region = params.region
-                    serverPort = params.serverPort
                     stackName = "${buildName}-${environment}"
                 }
             }
@@ -30,16 +28,24 @@ pipeline{
             steps{
                 dir('cdk') {
                     withAWS(credentials:"${awsCred}", region:"${region}"){
+                        // env var of jenkins pipeline can't be used within script block, hence has to be passed as env
                         withEnv(["CDK_DEFAULT_ACCOUNT=${env.AWS_ACCOUNT_ID}", "CDK_DEFAULT_REGION=${region}"]) {
                             script {
-                                sh 'npm install'
-                                def output = sh(script: "cdk deploy --require-approval never --context imageTag=${buildVersion} \
-                                    --context ecrRepo=${buildName} --context containerPort=${serverPort} \
-                                    --context stackName=${stackName}", returnStdout: true).trim()
-                                echo "Petclinic URL is ${output}"
+                                sh 'npm install' // install dependencies in package.json
+                                output = sh(script: "cdk deploy --require-approval never --context imageTag=${buildVersion} \
+                                    --context ecrRepo=${buildName} --context stackName=${stackName}", returnStdout: true).trim()
                             }
                         }
                     }
+                }
+            }
+        }
+
+        stage('Report URL'){
+            steps{
+                script {
+                    def albDnsName = output.readLines().findAll { it.trim().startsWith('EcsStack.ALBDnsName') }.collect { it.split('=')[1].trim() }[0]
+                    echo "Petclinic URL is http://${albDnsName}"
                 }
             }
         }

@@ -78,5 +78,3 @@ Outputs:
   AppURL:
     Description: URL to access the Java application
     Value: !Sub "http://${EC2Instance.PublicIp}:${ServerPort}"
-    Export:
-      Name: AppURL
